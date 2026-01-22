@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f1e9;
+  --surface: #ffffff;
+  --ink: #231f1a;
+  --muted: #6f645c;
+  --line: #e6dbc9;
+  --accent: #f97316;
+  --accent-strong: #ea580c;
+  --mint: #7dd3c7;
+  --sand: #f5d7b2;
+  --warning: #b45309;
+  --shadow-soft: 0 30px 80px -60px rgba(34, 24, 18, 0.65);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-headline);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--ink);
+    font-family: var(--font-body), sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+@layer utilities {
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.9s ease-out forwards;
+    opacity: 0;
+  }
+
+  .animate-float {
+    animation: float 14s ease-in-out infinite;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
