@@ -222,7 +222,7 @@ export default function Home() {
     setRateError(null);
     try {
       const response = await fetch(
-        `https://api.exchangerate.host/latest?base=${baseCurrency}`,
+        `/api/exchange?base=${encodeURIComponent(baseCurrency)}`,
       );
       if (!response.ok) {
         throw new Error("レートの取得に失敗しました。");
