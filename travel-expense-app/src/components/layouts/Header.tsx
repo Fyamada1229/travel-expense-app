@@ -27,7 +27,7 @@ export default function Header({
             旅費精算プランナー
           </p>
           <div className="space-y-3">
-            <h1 className="font-display text-[32px] font-semibold leading-[1.2] text-[color:var(--ink)] md:text-[40px]">
+            <h1 className="font-display text-[32px] font-semibold leading-[1.2] text-[color:var(--ink)] md:whitespace-nowrap md:text-[34px] lg:text-[36px]">
               旅をつくって、費用をスマートに割り勘。
             </h1>
             <p className="max-w-xl text-[14px] leading-7 text-[color:var(--muted)] md:text-[15px]">

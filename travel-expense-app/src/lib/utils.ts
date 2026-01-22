@@ -45,6 +45,12 @@ export const CURRENCY_OPTIONS: CurrencyOption[] = [
     search: ["China", "Yuan", "Renminbi"],
   },
   {
+    code: "HKD",
+    country: "香港",
+    name: "香港ドル",
+    search: ["Hong Kong", "Dollar"],
+  },
+  {
     code: "KRW",
     country: "韓国",
     name: "韓国ウォン",

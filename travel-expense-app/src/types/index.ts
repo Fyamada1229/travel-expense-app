@@ -19,3 +19,12 @@ export type SettlementTransfer = {
   toId: string;
   amount: number;
 };
+
+export type CurrencyRate = {
+  code: string;
+  name: string;
+  country?: string;
+  rank: number;
+  unit: number;
+  rateToJPY: number;
+};

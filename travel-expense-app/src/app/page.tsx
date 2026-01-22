@@ -12,11 +12,19 @@ import {
   DEFAULT_CURRENCIES,
   STORAGE_KEY,
   createId,
-  rebaseRates,
   roundTo,
 } from "@/lib/utils";
 import { computeSettlement, computeSummary } from "@/features/settlement/utils";
-import type { Expense, Participant, RatesMap } from "@/types";
+import type { CurrencyOption } from "@/lib/utils";
+import type { CurrencyRate, Expense, Participant } from "@/types";
+import {
+  BASE_CURRENCY_CODES,
+  createDefaultCurrencyRates,
+} from "@/features/rates/constants";
+import {
+  buildRatesMap,
+  normalizeCurrencyRates,
+} from "@/features/rates/utils";
 
 const DEFAULT_BASE_CURRENCY = "JPY";
 const DEFAULT_TRIP_TITLE = "卒業旅行";
@@ -26,7 +34,7 @@ type StoredSession = {
   baseCurrency?: string;
   participants?: Participant[];
   expenses?: Expense[];
-  rates?: RatesMap;
+  currencyRates?: CurrencyRate[];
   ratesUpdatedAt?: number | null;
   favoriteCurrencies?: string[];
 };
@@ -36,16 +44,15 @@ export default function Home() {
   const [baseCurrency, setBaseCurrency] = useState(DEFAULT_BASE_CURRENCY);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [rates, setRates] = useState<RatesMap>({
-    [DEFAULT_BASE_CURRENCY]: 1,
-  });
+  const [currencyRates, setCurrencyRates] = useState<CurrencyRate[]>(
+    createDefaultCurrencyRates(),
+  );
   const [ratesUpdatedAt, setRatesUpdatedAt] = useState<number | null>(null);
   const [rateStatus, setRateStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [rateError, setRateError] = useState<string | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const [rateNotice, setRateNotice] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [favoriteCurrencies, setFavoriteCurrencies] = useState<string[]>([
     DEFAULT_BASE_CURRENCY,
@@ -66,7 +73,7 @@ export default function Home() {
         setTripTitle(data.tripTitle);
       }
       const storedBaseCurrency = data.baseCurrency ?? DEFAULT_BASE_CURRENCY;
-      const normalizedBaseCurrency = DEFAULT_CURRENCIES.includes(
+      const normalizedBaseCurrency = BASE_CURRENCY_CODES.includes(
         storedBaseCurrency,
       )
         ? storedBaseCurrency
@@ -78,9 +85,7 @@ export default function Home() {
       if (Array.isArray(data.expenses)) {
         setExpenses(data.expenses);
       }
-      if (data.rates) {
-        setRates({ ...data.rates, [normalizedBaseCurrency]: 1 });
-      }
+      setCurrencyRates(normalizeCurrencyRates(data.currencyRates));
       if (data.ratesUpdatedAt) {
         setRatesUpdatedAt(data.ratesUpdatedAt);
       }
@@ -107,7 +112,7 @@ export default function Home() {
       baseCurrency,
       participants,
       expenses,
-      rates,
+      currencyRates,
       ratesUpdatedAt,
       favoriteCurrencies,
     };
@@ -117,7 +122,7 @@ export default function Home() {
     baseCurrency,
     participants,
     expenses,
-    rates,
+    currencyRates,
     ratesUpdatedAt,
     favoriteCurrencies,
     hydrated,
@@ -138,6 +143,11 @@ export default function Home() {
     usedCurrencies.forEach((currency) => set.add(currency.toUpperCase()));
     return DEFAULT_CURRENCIES.filter((currency) => set.has(currency));
   }, [favoriteCurrencies, baseCurrency, usedCurrencies]);
+
+  const rates = useMemo(
+    () => buildRatesMap(currencyRates, baseCurrency),
+    [currencyRates, baseCurrency],
+  );
 
   const summary = useMemo(
     () => computeSummary(participants, expenses, baseCurrency, rates),
@@ -168,12 +178,11 @@ export default function Home() {
     setBaseCurrency(DEFAULT_BASE_CURRENCY);
     setParticipants([]);
     setExpenses([]);
-    setRates({ [DEFAULT_BASE_CURRENCY]: 1 });
+    setCurrencyRates(createDefaultCurrencyRates());
     setRatesUpdatedAt(null);
     setRateStatus("idle");
     setRateError(null);
     setEditingExpenseId(null);
-    setRateNotice(null);
     setFavoriteCurrencies([DEFAULT_BASE_CURRENCY]);
   };
 
@@ -181,8 +190,6 @@ export default function Home() {
     if (nextBase === baseCurrency) {
       return;
     }
-    const rebased = rebaseRates(rates, baseCurrency, nextBase);
-    setRates(rebased.rates);
     setBaseCurrency(nextBase);
     setFavoriteCurrencies((prev) => {
       if (prev.includes(nextBase)) {
@@ -190,11 +197,6 @@ export default function Home() {
       }
       return [...prev, nextBase];
     });
-    setRateNotice(
-      rebased.success
-        ? null
-        : "ベース通貨を変更しました。レートを再取得するか手動で設定してください。",
-    );
   };
 
   const handleAddParticipant = (name: string) => {
@@ -245,20 +247,55 @@ export default function Home() {
     }
   };
 
-  const handleRateChange = (currency: string, value: number | null) => {
-    setRates((prev) => {
-      const next = { ...prev, [baseCurrency]: 1 };
-      if (currency === baseCurrency) {
-        return next;
+  const handleRateChange = (
+    code: string,
+    updates: Partial<Pick<CurrencyRate, "unit" | "rateToJPY">>,
+  ) => {
+    setCurrencyRates((prev) =>
+      prev.map((rate) =>
+        rate.code === code ? { ...rate, ...updates } : rate,
+      ),
+    );
+    setRatesUpdatedAt(Date.now());
+  };
+
+  const handleFetchRates = async () => {
+    setRateStatus("loading");
+    setRateError(null);
+    try {
+      const response = await fetch("/api/exchange?base=JPY");
+      if (!response.ok) {
+        throw new Error("レートの取得に失敗しました。");
       }
-      if (value === null) {
-        delete next[currency];
-      } else {
-        next[currency] = value;
+      const data = (await response.json()) as {
+        success?: boolean;
+        base?: string;
+        date?: string;
+        rates?: Record<string, number>;
+      };
+      if (data.success === false || !data.rates) {
+        throw new Error("レートを取得できませんでした。");
       }
-      return next;
-    });
-    setRateNotice(null);
+      setCurrencyRates((prev) =>
+        prev.map((rate) => {
+          const fetched = data.rates?.[rate.code];
+          if (typeof fetched === "number" && fetched > 0) {
+            return {
+              ...rate,
+              rateToJPY: roundTo(1 / fetched, 6),
+            };
+          }
+          return rate;
+        }),
+      );
+      setRatesUpdatedAt(Date.now());
+      setRateStatus("success");
+    } catch (error) {
+      setRateStatus("error");
+      setRateError(
+        error instanceof Error ? error.message : "レートを取得できませんでした。",
+      );
+    }
   };
 
   const handleAddFavoriteCurrency = (code: string) => {
@@ -279,46 +316,14 @@ export default function Home() {
     setFavoriteCurrencies((prev) => prev.filter((item) => item !== normalized));
   };
 
-  const handleFetchRates = async () => {
-    setRateStatus("loading");
-    setRateError(null);
-    try {
-      const response = await fetch(
-        `/api/exchange?base=${encodeURIComponent(baseCurrency)}`,
-      );
-      if (!response.ok) {
-        throw new Error("レートの取得に失敗しました。");
-      }
-      const data = (await response.json()) as {
-        success?: boolean;
-        base?: string;
-        date?: string;
-        rates?: Record<string, number>;
-      };
-      if (data.success === false) {
-        throw new Error("レートを取得できませんでした。");
-      }
-      if (!data.rates) {
-        throw new Error("レートを取得できませんでした。");
-      }
-      const nextRates: RatesMap = { [baseCurrency]: 1 };
-      Object.entries(data.rates).forEach(([currency, rate]) => {
-        if (currency === baseCurrency || typeof rate !== "number" || rate <= 0) {
-          return;
-        }
-        nextRates[currency] = roundTo(1 / rate, 6);
-      });
-      setRates(nextRates);
-      setRatesUpdatedAt(Date.now());
-      setRateStatus("success");
-      setRateNotice(null);
-    } catch (error) {
-      setRateStatus("error");
-      setRateError(
-        error instanceof Error ? error.message : "レートを取得できませんでした。",
-      );
-    }
-  };
+  const baseCurrencyOptions = useMemo(() => {
+    const byCode = new Map<string, CurrencyOption>(
+      CURRENCY_OPTIONS.map((option) => [option.code, option]),
+    );
+    return BASE_CURRENCY_CODES.map((code) => byCode.get(code)).filter(
+      (option): option is CurrencyOption => Boolean(option),
+    );
+  }, []);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -333,8 +338,7 @@ export default function Home() {
           <Header
             tripTitle={tripTitle}
             baseCurrency={baseCurrency}
-            currencyOptions={CURRENCY_OPTIONS}
-            rateNotice={rateNotice}
+            currencyOptions={baseCurrencyOptions}
             onTitleChange={setTripTitle}
             onBaseCurrencyChange={handleBaseCurrencyChange}
             onReset={handleReset}
@@ -345,6 +349,8 @@ export default function Home() {
           <ExpenseCard
             participants={participants}
             expenses={expenses}
+            paidById={summary.paidById}
+            balances={settlement.balances}
             baseCurrency={baseCurrency}
             rates={rates}
             currencyOptions={CURRENCY_OPTIONS}
@@ -358,6 +364,9 @@ export default function Home() {
             onEditExpense={setEditingExpenseId}
             onCancelEdit={() => setEditingExpenseId(null)}
             onDeleteExpense={handleDeleteExpense}
+            onAddParticipant={handleAddParticipant}
+            onRemoveParticipant={handleRemoveParticipant}
+            onUpdateParticipants={setParticipants}
           />
         </div>
 
@@ -377,9 +386,7 @@ export default function Home() {
           />
           <RatesCard
             baseCurrency={baseCurrency}
-            rates={rates}
-            currencyOptions={DEFAULT_CURRENCIES}
-            usedCurrencies={usedCurrencies}
+            currencyRates={currencyRates}
             status={rateStatus}
             lastUpdated={ratesUpdatedAt}
             error={rateError}

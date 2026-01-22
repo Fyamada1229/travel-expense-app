@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
 import { computeSettlement, computeSummary } from "@/features/settlement/utils";
 import {
@@ -9,7 +10,8 @@ import {
   formatDateTime,
   STORAGE_KEY,
 } from "@/lib/utils";
-import type { Expense, Participant, RatesMap } from "@/types";
+import type { CurrencyRate, Expense, Participant } from "@/types";
+import { buildRatesMap, normalizeCurrencyRates } from "@/features/rates/utils";
 
 const DEFAULT_BASE_CURRENCY = "JPY";
 const DEFAULT_TRIP_TITLE = "旅の精算";
@@ -19,7 +21,7 @@ type StoredSession = {
   baseCurrency?: string;
   participants?: Participant[];
   expenses?: Expense[];
-  rates?: RatesMap;
+  currencyRates?: CurrencyRate[];
   ratesUpdatedAt?: number | null;
 };
 
@@ -46,12 +48,15 @@ const MetricTile = ({
 );
 
 export default function SettlementPage() {
+  const router = useRouter();
   const [session, setSession] = useState<StoredSession | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [confirmedAt, setConfirmedAt] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isPdfExporting, setIsPdfExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [isEndOpen, setIsEndOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -77,7 +82,11 @@ export default function SettlementPage() {
   const ratesUpdatedAt = session?.ratesUpdatedAt ?? null;
 
   const rates = useMemo(
-    () => ({ ...(session?.rates ?? {}), [baseCurrency]: 1 }),
+    () =>
+      buildRatesMap(
+        normalizeCurrencyRates(session?.currencyRates),
+        baseCurrency,
+      ),
     [session, baseCurrency],
   );
 
@@ -117,13 +126,7 @@ export default function SettlementPage() {
       ? "bg-[color:var(--accent)] text-white hover:bg-[color:var(--accent-strong)]"
       : "cursor-not-allowed bg-[color:var(--line)] text-[color:var(--muted)]";
 
-  const handleDownloadImage = () => {
-    if (!confirmed || isExporting) {
-      return;
-    }
-    setIsExporting(true);
-    setExportError(null);
-
+  const buildExportCanvas = () => {
     const width = 1200;
     const padding = 64;
     const baseHeight = 640;
@@ -139,9 +142,8 @@ export default function SettlementPage() {
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
-      setIsExporting(false);
-      setExportError("画像の生成に失敗しました。");
-      return;
+      setExportError("出力の生成に失敗しました。");
+      return null;
     }
 
     ctx.fillStyle = "#f5f7fa";
@@ -215,6 +217,86 @@ export default function SettlementPage() {
         : ["参加者がいません。"],
     );
 
+    return canvas;
+  };
+
+  const downloadPdfFromCanvas = (canvas: HTMLCanvasElement) => {
+    const imageData = canvas.toDataURL("image/jpeg", 0.92);
+    const base64 = imageData.split(",")[1] ?? "";
+    const binary = atob(base64);
+    const imageBytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      imageBytes[i] = binary.charCodeAt(i);
+    }
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const encoder = new TextEncoder();
+    const chunks: Uint8Array[] = [];
+    const offsets: number[] = [];
+    let offset = 0;
+
+    const push = (value: string | Uint8Array) => {
+      const data =
+        typeof value === "string" ? encoder.encode(value) : value;
+      chunks.push(data);
+      offset += data.length;
+    };
+
+    const record = (value: string) => {
+      offsets.push(offset);
+      push(value);
+    };
+
+    push("%PDF-1.4\n");
+    record("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+    record("2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n");
+    record(
+      `3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /XObject << /Im0 4 0 R >> >> /MediaBox [0 0 ${width} ${height}] /Contents 5 0 R >>\nendobj\n`,
+    );
+    record(
+      `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`,
+    );
+    push(imageBytes);
+    push("\nendstream\nendobj\n");
+
+    const content = `q ${width} 0 0 ${height} 0 0 cm /Im0 Do Q`;
+    record(
+      `5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}\nendstream\nendobj\n`,
+    );
+
+    const xrefOffset = offset;
+    push(`xref\n0 6\n0000000000 65535 f \n`);
+    offsets.forEach((objOffset) => {
+      const line = `${objOffset.toString().padStart(10, "0")} 00000 n \n`;
+      push(line);
+    });
+    push(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+
+    const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const pdfBytes = new Uint8Array(total);
+    let cursor = 0;
+    chunks.forEach((chunk) => {
+      pdfBytes.set(chunk, cursor);
+      cursor += chunk.length;
+    });
+
+    return new Blob([pdfBytes], { type: "application/pdf" });
+  };
+
+  const handleDownloadImage = () => {
+    if (!confirmed || isExporting || isPdfExporting) {
+      return;
+    }
+    setIsExporting(true);
+    setExportError(null);
+
+    const canvas = buildExportCanvas();
+    if (!canvas) {
+      setIsExporting(false);
+      return;
+    }
+
     canvas.toBlob((blob) => {
       if (!blob) {
         setIsExporting(false);
@@ -235,11 +317,45 @@ export default function SettlementPage() {
   };
 
   const handleDownloadPdf = () => {
-    if (!confirmed) {
+    if (!confirmed || isPdfExporting || isExporting) {
       return;
     }
     setExportError(null);
-    window.print();
+    setIsPdfExporting(true);
+
+    const canvas = buildExportCanvas();
+    if (!canvas) {
+      setIsPdfExporting(false);
+      return;
+    }
+
+    try {
+      const pdfBlob = downloadPdfFromCanvas(canvas);
+      const url = URL.createObjectURL(pdfBlob);
+      const anchor = document.createElement("a");
+      const fileStamp = new Date(confirmedAt ?? Date.now())
+        .toISOString()
+        .slice(0, 10);
+      anchor.href = url;
+      anchor.download = `settlement-${fileStamp}.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError("PDFの生成に失敗しました。");
+    } finally {
+      setIsPdfExporting(false);
+    }
+  };
+
+  const handleEndSettlement = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+    setSession(null);
+    setConfirmed(false);
+    setConfirmedAt(null);
+    setIsEndOpen(false);
+    router.push("/");
   };
 
   if (!hydrated) {
@@ -490,19 +606,20 @@ export default function SettlementPage() {
                     type="button"
                     onClick={handleDownloadImage}
                     className="h-11 rounded-xl border border-[color:var(--line)] bg-white text-[11px] font-semibold tracking-[0.12em] text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
-                    disabled={isExporting}
+                    disabled={isExporting || isPdfExporting}
                   >
                     {isExporting ? "画像を作成中..." : "PNGをダウンロード"}
                   </button>
                   <button
                     type="button"
                     onClick={handleDownloadPdf}
-                    className="h-11 rounded-xl bg-[color:var(--accent)] text-[11px] font-semibold tracking-[0.12em] text-white transition hover:bg-[color:var(--accent-strong)]"
+                    className="h-11 rounded-xl bg-[color:var(--accent)] text-[11px] font-semibold tracking-[0.12em] text-white transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={isPdfExporting || isExporting}
                   >
-                    PDFで保存
+                    {isPdfExporting ? "PDFを作成中..." : "PDFで保存"}
                   </button>
                   <p className="text-[11px] text-[color:var(--muted)]">
-                    PDFは印刷ダイアログから保存できます。
+                    PDFは自動でダウンロードされます。
                   </p>
                   {exportError ? (
                     <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--warning)]">
@@ -514,7 +631,68 @@ export default function SettlementPage() {
             </Card>
           </div>
         </div>
+
+        {confirmed ? (
+          <div className="mt-6 flex justify-center no-print">
+            <button
+              type="button"
+              onClick={() => setIsEndOpen(true)}
+              className="w-full max-w-3xl rounded-2xl bg-[color:var(--accent)] px-6 py-4 text-[14px] font-semibold tracking-[0.14em] text-white shadow-soft transition hover:bg-[color:var(--accent-strong)] md:text-[16px]"
+            >
+              精算を終了する
+            </button>
+          </div>
+        ) : null}
       </main>
+      {isEndOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 no-print"
+          onClick={() => setIsEndOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-3xl border border-[color:var(--line)] bg-white/95 shadow-soft backdrop-blur"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] px-6 py-5">
+              <div className="space-y-1">
+                <p className="text-[12px] font-semibold tracking-[0.14em] text-[color:var(--muted)]">
+                  割り勘の終了
+                </p>
+                <p className="text-sm text-[color:var(--ink)]">
+                  この割り勘を終了してもよろしいですか？
+                </p>
+                <p className="text-[12px] text-[color:var(--muted)]">
+                  入力・計算内容はクリアされます。
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEndOpen(false)}
+                aria-label="閉じる"
+                className="rounded-full border border-[color:var(--line)] px-3 py-1 text-[12px] font-semibold text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex flex-col gap-3 px-6 py-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setIsEndOpen(false)}
+                className="h-11 rounded-xl border border-[color:var(--line)] px-6 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--ink)] transition hover:border-[color:var(--muted)]"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={handleEndSettlement}
+                className="h-11 rounded-xl bg-rose-600 px-6 text-[11px] font-semibold tracking-[0.12em] text-white transition hover:bg-rose-700"
+              >
+                終了する
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
