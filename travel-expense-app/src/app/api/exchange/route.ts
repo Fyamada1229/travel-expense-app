@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEFAULT_CURRENCIES } from "@/lib/utils";
 
 const BASE_URL =
   process.env.EXCHANGERATE_BASE_URL ?? "https://api.exchangerate.host";
@@ -7,6 +8,9 @@ const TIMEOUT_MS = Number(process.env.EXCHANGERATE_TIMEOUT_MS ?? "5000");
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const isCurrencyCode = (value: string) => /^[A-Z]{3}$/.test(value);
+const allowedCurrencies = new Set(
+  DEFAULT_CURRENCIES.map((currency) => currency.toUpperCase()),
+);
 
 type CachedRates = {
   success: true;
@@ -17,17 +21,22 @@ type CachedRates = {
 
 const cache = new Map<string, { data: CachedRates; expiresAt: number }>();
 
-const buildEndpoint = (baseUrl: string) => {
+const buildEndpoint = (baseUrl: string, path: string) => {
   const trimmed = baseUrl.replace(/\/$/, "");
-  return `${trimmed}/latest`;
+  return `${trimmed}/${path}`;
 };
 
 const shouldUseHeaderOnly = (baseUrl: URL) =>
   baseUrl.hostname.endsWith("apilayer.com");
 
+const shouldUseLiveEndpoint = (baseUrl: URL) =>
+  baseUrl.hostname.endsWith("exchangerate.host");
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const base = (searchParams.get("base") ?? "USD").toUpperCase();
+  const rawBase = (searchParams.get("base") ?? "USD").toUpperCase();
+  const aliasMap: Record<string, string> = { JPN: "JPY" };
+  const base = aliasMap[rawBase] ?? rawBase;
 
   let safeBaseUrl: URL;
   try {
@@ -53,6 +62,13 @@ export async function GET(request: Request) {
     );
   }
 
+  if (!allowedCurrencies.has(base)) {
+    return NextResponse.json(
+      { success: false, error: { info: "Unsupported base currency." } },
+      { status: 400 },
+    );
+  }
+
   if (!ACCESS_KEY) {
     return NextResponse.json(
       { success: false, error: { info: "Missing API key." } },
@@ -68,9 +84,17 @@ export async function GET(request: Request) {
     });
   }
 
-  const endpoint = buildEndpoint(safeBaseUrl.toString());
+  const useLiveEndpoint = shouldUseLiveEndpoint(safeBaseUrl);
+  const endpoint = buildEndpoint(
+    safeBaseUrl.toString(),
+    useLiveEndpoint ? "live" : "latest",
+  );
   const url = new URL(endpoint);
-  url.searchParams.set("base", base);
+  if (useLiveEndpoint) {
+    url.searchParams.set("source", base);
+  } else {
+    url.searchParams.set("base", base);
+  }
   const useHeaderOnly = shouldUseHeaderOnly(safeBaseUrl);
   if (!useHeaderOnly) {
     url.searchParams.set("access_key", ACCESS_KEY);
@@ -100,9 +124,39 @@ export async function GET(request: Request) {
       base?: string;
       date?: string;
       rates?: Record<string, number>;
+      source?: string;
+      quotes?: Record<string, number>;
       error?: { info?: string };
     };
-    if (data.success === false || !data.rates) {
+    const ratesFromQuotes = (payload: {
+      source?: string;
+      quotes?: Record<string, number>;
+    }) => {
+      const source = (payload.source ?? base).toUpperCase();
+      const entries = Object.entries(payload.quotes ?? {});
+      const mapped: Record<string, number> = {};
+      entries.forEach(([pair, value]) => {
+        if (pair.length !== 6) {
+          return;
+        }
+        const prefix = pair.slice(0, 3).toUpperCase();
+        const target = pair.slice(3).toUpperCase();
+        if (prefix !== source || !Number.isFinite(value)) {
+          return;
+        }
+        mapped[target] = value;
+      });
+      return mapped;
+    };
+
+    const normalizedRates =
+      data.rates ?? ratesFromQuotes({ source: data.source, quotes: data.quotes });
+
+    if (
+      data.success === false ||
+      !normalizedRates ||
+      !Object.keys(normalizedRates).length
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -116,7 +170,7 @@ export async function GET(request: Request) {
       success: true,
       base: data.base ?? base,
       date: data.date,
-      rates: data.rates,
+      rates: normalizedRates,
     };
     cache.set(base, { data: payload, expiresAt: Date.now() + CACHE_TTL_MS });
     return NextResponse.json(payload, {

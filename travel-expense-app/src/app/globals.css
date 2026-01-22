@@ -74,3 +74,23 @@
     transform: translateY(-12px);
   }
 }
+
+@media print {
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-area {
+    max-width: none;
+    padding: 0;
+  }
+
+  section {
+    break-inside: avoid;
+  }
+}

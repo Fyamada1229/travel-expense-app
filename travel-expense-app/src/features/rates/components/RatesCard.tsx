@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import type { RatesMap } from "@/lib/types";
-import { formatDateTime } from "@/lib/finance";
-import SectionCard from "@/components/SectionCard";
+import type { RatesMap } from "@/types";
+import { formatDateTime } from "@/lib/utils";
+import Card from "@/components/ui/Card";
 
 type RatesCardProps = {
   baseCurrency: string;
@@ -27,6 +27,7 @@ export default function RatesCard({
   onFetchRates,
 }: RatesCardProps) {
   const [query, setQuery] = useState("");
+  const getUnitAmount = (currency: string) => (currency === "JPY" ? 100 : 1);
 
   const currencyList = useMemo(() => {
     const set = new Set<string>([baseCurrency]);
@@ -40,9 +41,9 @@ export default function RatesCard({
   );
 
   return (
-    <SectionCard
+    <Card
       title="為替レート"
-      description={`1通貨単位がベース通貨でいくらかを設定します（ベース: ${baseCurrency}）。`}
+      description={`通貨ごとの単位でベース通貨換算を設定します（ベース: ${baseCurrency}）。JPYは100円単位で表示します。`}
       eyebrow="レート"
       action={
         <button
@@ -81,7 +82,10 @@ export default function RatesCard({
         </div>
         <div className="grid gap-3">
           {filteredList.map((currency) => {
-            const value = currency === baseCurrency ? 1 : rates[currency];
+            const unitAmount = getUnitAmount(currency);
+            const rawValue = currency === baseCurrency ? 1 : rates[currency];
+            const displayValue =
+              typeof rawValue === "number" ? rawValue * unitAmount : "";
             return (
               <div
                 key={currency}
@@ -92,7 +96,9 @@ export default function RatesCard({
                     {currency}
                   </p>
                   <p className="text-xs text-[color:var(--muted)]">
-                    1 {currency} =
+                    {currency === baseCurrency
+                      ? `基準通貨（${unitAmount} ${currency} = ${unitAmount} ${baseCurrency}）`
+                      : `${unitAmount} ${currency} =`}
                   </p>
                 </div>
                 <input
@@ -100,13 +106,13 @@ export default function RatesCard({
                   min="0"
                   step="0.0001"
                   className="h-10 rounded-xl border border-[color:var(--line)] bg-white/90 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
-                  value={value ?? ""}
+                  value={displayValue}
                   onChange={(event) => {
                     const nextValue = Number(event.target.value);
                     onRateChange(
                       currency,
                       Number.isFinite(nextValue) && nextValue > 0
-                        ? nextValue
+                        ? nextValue / unitAmount
                         : null,
                     );
                   }}
@@ -117,6 +123,6 @@ export default function RatesCard({
           })}
         </div>
       </div>
-    </SectionCard>
+    </Card>
   );
 }

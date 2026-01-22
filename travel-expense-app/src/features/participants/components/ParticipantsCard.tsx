@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import type { Expense, Participant } from "@/lib/types";
-import { formatCurrency } from "@/lib/finance";
-import SectionCard from "@/components/SectionCard";
+import type { Expense, Participant } from "@/types";
+import { formatCurrency } from "@/lib/utils";
+import Card from "@/components/ui/Card";
 
 type ParticipantsCardProps = {
   participants: Participant[];
@@ -11,6 +11,7 @@ type ParticipantsCardProps = {
   baseCurrency: string;
   onAddParticipant: (name: string) => void;
   onRemoveParticipant: (id: string) => void;
+  onUpdateParticipants: (participants: Participant[]) => void;
 };
 
 export default function ParticipantsCard({
@@ -21,9 +22,13 @@ export default function ParticipantsCard({
   baseCurrency,
   onAddParticipant,
   onRemoveParticipant,
+  onUpdateParticipants,
 }: ParticipantsCardProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [editError, setEditError] = useState<string | null>(null);
 
   const expenseByPayer = useMemo(() => {
     const map: Record<string, number> = {};
@@ -48,11 +53,78 @@ export default function ParticipantsCard({
     setError(null);
   };
 
+  const startEditing = () => {
+    const initialDrafts: Record<string, string> = {};
+    participants.forEach((participant) => {
+      initialDrafts[participant.id] = participant.name;
+    });
+    setDrafts(initialDrafts);
+    setIsEditing(true);
+    setEditError(null);
+  };
+
+  const handleSave = () => {
+    const nextParticipants = participants.map((participant) => {
+      const nextName = (drafts[participant.id] ?? participant.name).trim();
+      return { ...participant, name: nextName };
+    });
+    if (nextParticipants.some((participant) => !participant.name)) {
+      setEditError("名前を入力してください。");
+      return;
+    }
+    const nameSet = new Set<string>();
+    for (const participant of nextParticipants) {
+      if (nameSet.has(participant.name)) {
+        setEditError("同じ名前が既にあります。");
+        return;
+      }
+      nameSet.add(participant.name);
+    }
+    onUpdateParticipants(nextParticipants);
+    setIsEditing(false);
+    setEditError(null);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditError(null);
+  };
+
   return (
-    <SectionCard
+    <Card
       title="参加者"
       description="旅行メンバーを追加して支払い状況を見える化。"
       eyebrow="参加者"
+      action={
+        participants.length ? (
+          isEditing ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                className="rounded-full bg-[color:var(--accent)] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white transition hover:bg-[color:var(--accent-strong)]"
+              >
+                保存
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="rounded-full border border-[color:var(--line)] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--ink)] transition hover:border-[color:var(--muted)]"
+              >
+                キャンセル
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="rounded-full border border-[color:var(--line)] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+            >
+              編集
+            </button>
+          )
+        ) : null
+      }
     >
       <div className="grid gap-5">
         <div className="grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
@@ -79,6 +151,11 @@ export default function ParticipantsCard({
               {error}
             </p>
           ) : null}
+          {editError ? (
+            <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--warning)]">
+              {editError}
+            </p>
+          ) : null}
         </div>
 
         <div className="grid gap-3">
@@ -97,9 +174,22 @@ export default function ParticipantsCard({
                 className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 py-3"
               >
                 <div>
-                  <p className="text-sm font-semibold text-[color:var(--ink)]">
-                    {participant.name}
-                  </p>
+                  {isEditing ? (
+                    <input
+                      className="h-9 rounded-lg border border-[color:var(--line)] bg-white/90 px-2 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
+                      value={drafts[participant.id] ?? participant.name}
+                      onChange={(event) =>
+                        setDrafts((prev) => ({
+                          ...prev,
+                          [participant.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  ) : (
+                    <p className="text-sm font-semibold text-[color:var(--ink)]">
+                      {participant.name}
+                    </p>
+                  )}
                   <p className="text-xs text-[color:var(--muted)]">
                     支払い合計 {formatCurrency(paid, baseCurrency)}
                   </p>
@@ -118,7 +208,7 @@ export default function ParticipantsCard({
                   <button
                     type="button"
                     onClick={() => onRemoveParticipant(participant.id)}
-                    disabled={hasExpenses}
+                    disabled={hasExpenses || isEditing}
                     className="rounded-full border border-[color:var(--line)] px-3 py-1 text-[11px] font-semibold tracking-[0.1em] text-[color:var(--ink)] transition hover:border-[color:var(--warning)] hover:text-[color:var(--warning)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     削除
@@ -134,6 +224,6 @@ export default function ParticipantsCard({
           ) : null}
         </div>
       </div>
-    </SectionCard>
+    </Card>
   );
 }

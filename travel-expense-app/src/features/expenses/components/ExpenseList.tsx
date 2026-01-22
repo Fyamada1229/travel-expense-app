@@ -1,11 +1,10 @@
-import type { Expense, Participant, RatesMap } from "@/lib/types";
+import type { Expense, Participant, RatesMap } from "@/types";
 import {
   computeBaseAmount,
   formatCurrency,
   formatDateTime,
-} from "@/lib/finance";
-
-const byCreatedAt = (a: Expense, b: Expense) => b.createdAt - a.createdAt;
+} from "@/lib/utils";
+import { sortExpensesByCreatedAt } from "@/features/expenses/utils";
 
 type ExpenseListProps = {
   expenses: Expense[];
@@ -38,7 +37,7 @@ export default function ExpenseList({
 
   return (
     <div className="grid gap-3">
-      {[...expenses].sort(byCreatedAt).map((expense) => {
+      {sortExpensesByCreatedAt(expenses).map((expense) => {
         const baseAmount = computeBaseAmount(
           expense.amount,
           expense.currency,

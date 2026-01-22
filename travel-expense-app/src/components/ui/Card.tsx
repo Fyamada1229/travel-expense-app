@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
-const combine = (...classes: Array<string | undefined>) =>
-  classes.filter(Boolean).join(" ");
-
-type SectionCardProps = {
+type CardProps = {
   eyebrow?: string;
   title: string;
   description?: string;
@@ -12,17 +10,17 @@ type SectionCardProps = {
   className?: string;
 };
 
-export default function SectionCard({
+export default function Card({
   eyebrow,
   title,
   description,
   action,
   children,
   className,
-}: SectionCardProps) {
+}: CardProps) {
   return (
     <section
-      className={combine(
+      className={cn(
         "rounded-3xl border border-[color:var(--line)] bg-white/70 shadow-soft backdrop-blur",
         className,
       )}

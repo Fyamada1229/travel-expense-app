@@ -1,14 +1,16 @@
-type TripHeaderProps = {
+import type { CurrencyOption } from "@/lib/utils";
+
+type HeaderProps = {
   tripTitle: string;
   baseCurrency: string;
-  currencyOptions: string[];
+  currencyOptions: CurrencyOption[];
   rateNotice?: string | null;
   onTitleChange: (value: string) => void;
   onBaseCurrencyChange: (value: string) => void;
   onReset: () => void;
 };
 
-export default function TripHeader({
+export default function Header({
   tripTitle,
   baseCurrency,
   currencyOptions,
@@ -16,7 +18,7 @@ export default function TripHeader({
   onTitleChange,
   onBaseCurrencyChange,
   onReset,
-}: TripHeaderProps) {
+}: HeaderProps) {
   return (
     <section className="rounded-[32px] border border-[color:var(--line)] bg-white/70 px-6 pb-6 pt-8 shadow-soft backdrop-blur">
       <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
@@ -45,15 +47,15 @@ export default function TripHeader({
               />
             </label>
             <label className="grid gap-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
-              ベース通貨
+              ベース通貨（精算用）
               <select
                 className="h-11 rounded-xl border border-[color:var(--line)] bg-white/80 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
                 value={baseCurrency}
                 onChange={(event) => onBaseCurrencyChange(event.target.value)}
               >
-                {currencyOptions.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
+                {currencyOptions.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.country} ({option.code})
                   </option>
                 ))}
               </select>

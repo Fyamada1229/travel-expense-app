@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/finance";
+import { formatCurrency } from "@/lib/utils";
 
 type SummaryCardsProps = {
   total: number;
@@ -18,15 +18,17 @@ const SummaryCard = ({
   value: string;
   helper?: string;
 }) => (
-  <div className="rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 py-5 shadow-soft">
-    <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+  <div className="min-w-0 rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 py-5 shadow-soft md:min-h-[140px] md:px-5 md:py-6 lg:px-6 lg:py-7">
+    <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)] md:text-[12px] lg:text-[13px]">
       {label}
     </p>
-    <p className="mt-3 font-display text-[22px] font-semibold text-[color:var(--ink)]">
+    <p className="mt-3 min-w-0 break-words font-display text-[18px] font-semibold leading-tight text-[color:var(--ink)] md:text-[22px] lg:text-[24px]">
       {value}
     </p>
     {helper ? (
-      <p className="mt-2 text-[12px] text-[color:var(--muted)]">{helper}</p>
+      <p className="mt-2 text-[12px] text-[color:var(--muted)] md:text-[13px] lg:text-[14px]">
+        {helper}
+      </p>
     ) : null}
   </div>
 );
@@ -40,7 +42,7 @@ export default function SummaryCards({
   missingRates,
 }: SummaryCardsProps) {
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="grid content-start gap-4 md:grid-cols-2 md:gap-5 xl:gap-6 2xl:grid-cols-4">
       <SummaryCard
         label="総支出"
         value={formatCurrency(total, baseCurrency)}

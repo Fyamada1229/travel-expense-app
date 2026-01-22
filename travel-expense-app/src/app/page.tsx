@@ -1,22 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import ExpensesCard from "@/components/ExpensesCard";
-import ParticipantsCard from "@/components/ParticipantsCard";
-import RatesCard from "@/components/RatesCard";
-import SettlementCard from "@/components/SettlementCard";
-import SummaryCards from "@/components/SummaryCards";
-import TripHeader from "@/components/TripHeader";
+import Header from "@/components/layouts/Header";
+import ExpenseCard from "@/features/expenses/components/ExpenseCard";
+import ParticipantsCard from "@/features/participants/components/ParticipantsCard";
+import RatesCard from "@/features/rates/components/RatesCard";
+import SettlementCard from "@/features/settlement/components/SettlementCard";
+import SummaryCards from "@/features/settlement/components/SummaryCards";
 import {
+  CURRENCY_OPTIONS,
   DEFAULT_CURRENCIES,
   STORAGE_KEY,
-  computeSettlement,
-  computeSummary,
   createId,
   rebaseRates,
   roundTo,
-} from "@/lib/finance";
-import type { Expense, Participant, RatesMap } from "@/lib/types";
+} from "@/lib/utils";
+import { computeSettlement, computeSummary } from "@/features/settlement/utils";
+import type { Expense, Participant, RatesMap } from "@/types";
 
 const DEFAULT_BASE_CURRENCY = "JPY";
 const DEFAULT_TRIP_TITLE = "卒業旅行";
@@ -28,6 +28,7 @@ type StoredSession = {
   expenses?: Expense[];
   rates?: RatesMap;
   ratesUpdatedAt?: number | null;
+  favoriteCurrencies?: string[];
 };
 
 export default function Home() {
@@ -46,6 +47,9 @@ export default function Home() {
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [rateNotice, setRateNotice] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [favoriteCurrencies, setFavoriteCurrencies] = useState<string[]>([
+    DEFAULT_BASE_CURRENCY,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -62,9 +66,12 @@ export default function Home() {
         setTripTitle(data.tripTitle);
       }
       const storedBaseCurrency = data.baseCurrency ?? DEFAULT_BASE_CURRENCY;
-      if (data.baseCurrency) {
-        setBaseCurrency(data.baseCurrency);
-      }
+      const normalizedBaseCurrency = DEFAULT_CURRENCIES.includes(
+        storedBaseCurrency,
+      )
+        ? storedBaseCurrency
+        : DEFAULT_BASE_CURRENCY;
+      setBaseCurrency(normalizedBaseCurrency);
       if (Array.isArray(data.participants)) {
         setParticipants(data.participants);
       }
@@ -72,10 +79,18 @@ export default function Home() {
         setExpenses(data.expenses);
       }
       if (data.rates) {
-        setRates({ ...data.rates, [storedBaseCurrency]: 1 });
+        setRates({ ...data.rates, [normalizedBaseCurrency]: 1 });
       }
       if (data.ratesUpdatedAt) {
         setRatesUpdatedAt(data.ratesUpdatedAt);
+      }
+      if (Array.isArray(data.favoriteCurrencies)) {
+        const sanitized = data.favoriteCurrencies
+          .map((currency) => currency.toUpperCase())
+          .filter((currency) => DEFAULT_CURRENCIES.includes(currency));
+        setFavoriteCurrencies(
+          sanitized.length ? sanitized : [normalizedBaseCurrency],
+        );
       }
     } catch {
       // Ignore corrupted session data.
@@ -94,6 +109,7 @@ export default function Home() {
       expenses,
       rates,
       ratesUpdatedAt,
+      favoriteCurrencies,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [
@@ -103,6 +119,7 @@ export default function Home() {
     expenses,
     rates,
     ratesUpdatedAt,
+    favoriteCurrencies,
     hydrated,
   ]);
 
@@ -111,6 +128,16 @@ export default function Home() {
     expenses.forEach((expense) => set.add(expense.currency));
     return Array.from(set);
   }, [expenses]);
+
+  const displayCurrencies = useMemo(() => {
+    const set = new Set<string>();
+    favoriteCurrencies.forEach((currency) =>
+      set.add(currency.toUpperCase()),
+    );
+    set.add(baseCurrency);
+    usedCurrencies.forEach((currency) => set.add(currency.toUpperCase()));
+    return DEFAULT_CURRENCIES.filter((currency) => set.has(currency));
+  }, [favoriteCurrencies, baseCurrency, usedCurrencies]);
 
   const summary = useMemo(
     () => computeSummary(participants, expenses, baseCurrency, rates),
@@ -147,6 +174,7 @@ export default function Home() {
     setRateError(null);
     setEditingExpenseId(null);
     setRateNotice(null);
+    setFavoriteCurrencies([DEFAULT_BASE_CURRENCY]);
   };
 
   const handleBaseCurrencyChange = (nextBase: string) => {
@@ -156,6 +184,12 @@ export default function Home() {
     const rebased = rebaseRates(rates, baseCurrency, nextBase);
     setRates(rebased.rates);
     setBaseCurrency(nextBase);
+    setFavoriteCurrencies((prev) => {
+      if (prev.includes(nextBase)) {
+        return prev;
+      }
+      return [...prev, nextBase];
+    });
     setRateNotice(
       rebased.success
         ? null
@@ -178,6 +212,16 @@ export default function Home() {
     payload: Omit<Expense, "id" | "createdAt">,
     expenseId?: string,
   ) => {
+    setFavoriteCurrencies((prev) => {
+      const nextCurrency = payload.currency.toUpperCase();
+      if (!DEFAULT_CURRENCIES.includes(nextCurrency)) {
+        return prev;
+      }
+      if (prev.includes(nextCurrency)) {
+        return prev;
+      }
+      return [...prev, nextCurrency];
+    });
     if (expenseId) {
       setExpenses((prev) =>
         prev.map((expense) =>
@@ -215,6 +259,24 @@ export default function Home() {
       return next;
     });
     setRateNotice(null);
+  };
+
+  const handleAddFavoriteCurrency = (code: string) => {
+    const normalized = code.toUpperCase();
+    if (!DEFAULT_CURRENCIES.includes(normalized)) {
+      return;
+    }
+    setFavoriteCurrencies((prev) =>
+      prev.includes(normalized) ? prev : [...prev, normalized],
+    );
+  };
+
+  const handleRemoveFavoriteCurrency = (code: string) => {
+    const normalized = code.toUpperCase();
+    if (normalized === baseCurrency) {
+      return;
+    }
+    setFavoriteCurrencies((prev) => prev.filter((item) => item !== normalized));
   };
 
   const handleFetchRates = async () => {
@@ -268,10 +330,10 @@ export default function Home() {
 
       <main className="relative mx-auto flex max-w-6xl flex-col gap-8 px-5 pb-20 pt-12 md:px-8">
         <div className="animate-fade-up" style={{ animationDelay: "60ms" }}>
-          <TripHeader
+          <Header
             tripTitle={tripTitle}
             baseCurrency={baseCurrency}
-            currencyOptions={DEFAULT_CURRENCIES}
+            currencyOptions={CURRENCY_OPTIONS}
             rateNotice={rateNotice}
             onTitleChange={setTripTitle}
             onBaseCurrencyChange={handleBaseCurrencyChange}
@@ -280,13 +342,22 @@ export default function Home() {
         </div>
 
         <div className="animate-fade-up" style={{ animationDelay: "120ms" }}>
-          <SummaryCards
-            total={summary.total}
-            average={summary.average}
-            participantsCount={participants.length}
-            expenseCount={expenses.length}
+          <ExpenseCard
+            participants={participants}
+            expenses={expenses}
             baseCurrency={baseCurrency}
-            missingRates={summary.missingRates}
+            rates={rates}
+            currencyOptions={CURRENCY_OPTIONS}
+            activeCurrencies={displayCurrencies}
+            favoriteCurrencies={favoriteCurrencies}
+            usedCurrencies={usedCurrencies}
+            editingExpense={editingExpense}
+            onAddFavoriteCurrency={handleAddFavoriteCurrency}
+            onRemoveFavoriteCurrency={handleRemoveFavoriteCurrency}
+            onSubmitExpense={handleSubmitExpense}
+            onEditExpense={setEditingExpenseId}
+            onCancelEdit={() => setEditingExpenseId(null)}
+            onDeleteExpense={handleDeleteExpense}
           />
         </div>
 
@@ -302,6 +373,7 @@ export default function Home() {
             baseCurrency={baseCurrency}
             onAddParticipant={handleAddParticipant}
             onRemoveParticipant={handleRemoveParticipant}
+            onUpdateParticipants={setParticipants}
           />
           <RatesCard
             baseCurrency={baseCurrency}
@@ -317,20 +389,16 @@ export default function Home() {
         </div>
 
         <div
-          className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr] animate-fade-up"
+          className="grid items-start gap-6 lg:grid-cols-[1.2fr_0.8fr] xl:grid-cols-[1.3fr_0.7fr] animate-fade-up"
           style={{ animationDelay: "240ms" }}
         >
-          <ExpensesCard
-            participants={participants}
-            expenses={expenses}
+          <SummaryCards
+            total={summary.total}
+            average={summary.average}
+            participantsCount={participants.length}
+            expenseCount={expenses.length}
             baseCurrency={baseCurrency}
-            rates={rates}
-            currencyOptions={DEFAULT_CURRENCIES}
-            editingExpense={editingExpense}
-            onSubmitExpense={handleSubmitExpense}
-            onEditExpense={setEditingExpenseId}
-            onCancelEdit={() => setEditingExpenseId(null)}
-            onDeleteExpense={handleDeleteExpense}
+            missingRates={summary.missingRates}
           />
           <SettlementCard
             transfers={settlement.transfers}

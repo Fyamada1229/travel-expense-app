@@ -1,99 +1,5 @@
-import type {
-  Expense,
-  Participant,
-  RatesMap,
-  SettlementTransfer,
-} from "./types";
-
-export const DEFAULT_CURRENCIES = [
-  "JPY",
-  "USD",
-  "EUR",
-  "GBP",
-  "AUD",
-  "CAD",
-  "CHF",
-  "CNY",
-  "KRW",
-  "SGD",
-  "THB",
-  "TWD",
-  "VND",
-];
-
-export const STORAGE_KEY = "travel-expense-session-v1";
-
-export const createId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-export const getCurrencyDigits = (currency: string) => {
-  try {
-    const resolved = new Intl.NumberFormat("ja-JP", {
-      style: "currency",
-      currency,
-    }).resolvedOptions().maximumFractionDigits;
-    return typeof resolved === "number" ? resolved : currency === "JPY" ? 0 : 2;
-  } catch {
-    return currency === "JPY" ? 0 : 2;
-  }
-};
-
-export const roundTo = (value: number, digits: number) => {
-  const factor = 10 ** digits;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
-};
-
-export const formatCurrency = (value: number, currency: string) => {
-  const digits = getCurrencyDigits(currency);
-  try {
-    return new Intl.NumberFormat("ja-JP", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: digits,
-    }).format(value);
-  } catch {
-    return `${roundTo(value, digits)} ${currency}`;
-  }
-};
-
-export const formatDateTime = (value: number) => {
-  return new Intl.DateTimeFormat("ja-JP", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-};
-
-export const getRateToBase = (
-  currency: string,
-  baseCurrency: string,
-  rates: RatesMap,
-) => {
-  if (currency === baseCurrency) {
-    return 1;
-  }
-  const rate = rates[currency];
-  if (!rate || rate <= 0) {
-    return null;
-  }
-  return rate;
-};
-
-export const computeBaseAmount = (
-  amount: number,
-  currency: string,
-  baseCurrency: string,
-  rates: RatesMap,
-) => {
-  const rate = getRateToBase(currency, baseCurrency, rates);
-  if (!rate) {
-    return null;
-  }
-  return amount * rate;
-};
+import type { Expense, Participant, RatesMap, SettlementTransfer } from "@/types";
+import { computeBaseAmount, getCurrencyDigits, roundTo } from "@/lib/utils";
 
 export type Summary = {
   total: number;
@@ -160,12 +66,7 @@ export const computeSettlement = (
   baseCurrency: string,
   rates: RatesMap,
 ): Settlement => {
-  const summary = computeSummary(
-    participants,
-    expenses,
-    baseCurrency,
-    rates,
-  );
+  const summary = computeSummary(participants, expenses, baseCurrency, rates);
   const digits = getCurrencyDigits(baseCurrency);
   const balances: Record<string, number> = {};
 
@@ -223,38 +124,4 @@ export const computeSettlement = (
     balances,
     missingRates: summary.missingRates,
   };
-};
-
-export const rebaseRates = (
-  rates: RatesMap,
-  oldBase: string,
-  newBase: string,
-) => {
-  if (oldBase === newBase) {
-    return { rates, success: true };
-  }
-  const oldRateForNewBase = rates[newBase];
-  if (!oldRateForNewBase || oldRateForNewBase <= 0) {
-    return {
-      rates: {
-        [newBase]: 1,
-      },
-      success: false,
-    };
-  }
-
-  const rebased: RatesMap = {};
-  Object.entries(rates).forEach(([currency, rate]) => {
-    if (!rate || rate <= 0) {
-      return;
-    }
-    if (currency === newBase) {
-      rebased[currency] = 1;
-      return;
-    }
-    rebased[currency] = roundTo(rate / oldRateForNewBase, 6);
-  });
-
-  rebased[newBase] = 1;
-  return { rates: rebased, success: true };
 };
