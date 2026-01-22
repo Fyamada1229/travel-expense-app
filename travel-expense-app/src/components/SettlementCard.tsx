@@ -23,20 +23,20 @@ export default function SettlementCard({
 
   return (
     <SectionCard
-      title="Settlement"
-      description="Minimum transfers to balance everyone out."
-      eyebrow="Settle"
+      title="精算"
+      description="最小回数で精算します。"
+      eyebrow="精算"
     >
       <div className="grid gap-4">
         {missingRates ? (
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--warning)]">
-            Add missing exchange rates to finalize settlement.
+          <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--warning)]">
+            不足している為替レートを入力すると精算が確定します。
           </p>
         ) : null}
         <div className="grid gap-3">
           {transfers.length === 0 ? (
             <p className="text-sm text-[color:var(--muted)]">
-              No settlement needed yet.
+              まだ精算はありません。
             </p>
           ) : (
             transfers.map((transfer, index) => (
@@ -45,8 +45,8 @@ export default function SettlementCard({
                 className="rounded-2xl border border-[color:var(--line)] bg-white/80 px-4 py-3"
               >
                 <p className="text-sm font-semibold text-[color:var(--ink)]">
-                  {participantMap.get(transfer.fromId) ?? "Unknown"} pays{" "}
-                  {participantMap.get(transfer.toId) ?? "Unknown"}
+                  {participantMap.get(transfer.fromId) ?? "不明"} から{" "}
+                  {participantMap.get(transfer.toId) ?? "不明"} へ支払い
                 </p>
                 <p className="text-xs text-[color:var(--muted)]">
                   {formatCurrency(transfer.amount, baseCurrency)}
@@ -56,8 +56,8 @@ export default function SettlementCard({
           )}
         </div>
         <div className="grid gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-            Net Balance
+          <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+            差額
           </p>
           <div className="grid gap-2">
             {participants.map((participant) => {
@@ -71,7 +71,7 @@ export default function SettlementCard({
                     {participant.name}
                   </span>
                   <span
-                    className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+                    className={`text-[11px] font-semibold tracking-[0.1em] ${
                       balance >= 0
                         ? "text-emerald-700"
                         : "text-rose-700"

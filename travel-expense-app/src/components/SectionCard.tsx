@@ -30,12 +30,12 @@ export default function SectionCard({
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-[color:var(--line)] px-6 pb-4 pt-6">
         <div className="space-y-2">
           {eyebrow ? (
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[color:var(--muted)]">
+            <p className="text-[11px] font-semibold tracking-[0.14em] text-[color:var(--muted)]">
               {eyebrow}
             </p>
           ) : null}
           <div className="space-y-1">
-            <h2 className="font-display text-xl font-semibold text-[color:var(--ink)]">
+            <h2 className="font-display text-[18px] font-semibold text-[color:var(--ink)]">
               {title}
             </h2>
             {description ? (

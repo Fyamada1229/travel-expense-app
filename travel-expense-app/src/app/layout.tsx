@@ -1,23 +1,17 @@
 import type { Metadata } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import { Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const notoSans = Noto_Sans_JP({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const fraunces = Fraunces({
-  variable: "--font-headline",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
 export const metadata: Metadata = {
-  title: "TripSplit - Travel Expense Planner",
+  title: "TripSplit | 旅費精算プランナー",
   description:
-    "Track travel expenses across currencies and settle balances fast.",
+    "旅行中の支出を複数通貨で記録し、最小回数で精算できます。",
 };
 
 export default function RootLayout({
@@ -26,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
+    <html lang="ja" className={notoSans.variable}>
       <body className="antialiased">{children}</body>
     </html>
   );

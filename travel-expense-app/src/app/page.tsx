@@ -19,7 +19,7 @@ import {
 import type { Expense, Participant, RatesMap } from "@/lib/types";
 
 const DEFAULT_BASE_CURRENCY = "JPY";
-const DEFAULT_TRIP_TITLE = "Graduation Trip";
+const DEFAULT_TRIP_TITLE = "卒業旅行";
 
 type StoredSession = {
   tripTitle?: string;
@@ -130,7 +130,7 @@ export default function Home() {
   const handleReset = () => {
     if (typeof window !== "undefined") {
       const confirmed = window.confirm(
-        "Start a new trip and clear all current data?",
+        "新しい旅行を開始し、現在のデータをすべて削除しますか？",
       );
       if (!confirmed) {
         return;
@@ -159,7 +159,7 @@ export default function Home() {
     setRateNotice(
       rebased.success
         ? null
-        : "Base currency changed. Refresh or set rates manually.",
+        : "ベース通貨を変更しました。レートを再取得するか手動で設定してください。",
     );
   };
 
@@ -225,7 +225,7 @@ export default function Home() {
         `https://api.exchangerate.host/latest?base=${baseCurrency}`,
       );
       if (!response.ok) {
-        throw new Error("Failed to fetch rates.");
+        throw new Error("レートの取得に失敗しました。");
       }
       const data = (await response.json()) as {
         success?: boolean;
@@ -234,10 +234,10 @@ export default function Home() {
         rates?: Record<string, number>;
       };
       if (data.success === false) {
-        throw new Error("Rates not available.");
+        throw new Error("レートを取得できませんでした。");
       }
       if (!data.rates) {
-        throw new Error("Rates not available.");
+        throw new Error("レートを取得できませんでした。");
       }
       const nextRates: RatesMap = { [baseCurrency]: 1 };
       Object.entries(data.rates).forEach(([currency, rate]) => {
@@ -253,17 +253,17 @@ export default function Home() {
     } catch (error) {
       setRateStatus("error");
       setRateError(
-        error instanceof Error ? error.message : "Unable to fetch rates.",
+        error instanceof Error ? error.message : "レートを取得できませんでした。",
       );
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[color:var(--background)] text-[color:var(--ink)]">
+    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-24 top-10 h-64 w-64 rounded-full bg-[color:var(--accent)]/20 blur-[80px]" />
-        <div className="absolute right-10 top-32 h-72 w-72 rounded-full bg-[color:var(--mint)]/30 blur-[90px]" />
-        <div className="absolute bottom-0 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[color:var(--sand)]/40 blur-[100px]" />
+        <div className="absolute -left-24 top-10 h-64 w-64 rounded-full bg-(--accent)/20 blur-[90px]" />
+        <div className="absolute right-10 top-28 h-72 w-72 rounded-full bg-(--mint)/25 blur-[110px]" />
+        <div className="absolute bottom-0 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-(--sand)/60 blur-[120px]" />
       </div>
 
       <main className="relative mx-auto flex max-w-6xl flex-col gap-8 px-5 pb-20 pt-12 md:px-8">

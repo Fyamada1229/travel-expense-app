@@ -46,23 +46,23 @@ export default function ExpenseForm({
 
   const handleSubmit = () => {
     if (participants.length === 0) {
-      setError("Add a participant first.");
+      setError("先に参加者を追加してください。");
       return;
     }
     if (!payerId) {
-      setError("Select who paid.");
+      setError("支払った人を選択してください。");
       return;
     }
     if (!title.trim()) {
-      setError("Expense title is required.");
+      setError("支出のタイトルを入力してください。");
       return;
     }
     if (!Number.isFinite(amountValue) || amountValue <= 0) {
-      setError("Amount must be greater than 0.");
+      setError("金額は0より大きい値を入力してください。");
       return;
     }
     if (currency !== baseCurrency && (!rates[currency] || rates[currency] <= 0)) {
-      setError("Add an exchange rate for this currency.");
+      setError("この通貨の為替レートを設定してください。");
       return;
     }
 
@@ -89,8 +89,8 @@ export default function ExpenseForm({
     <div className="grid gap-4">
       <div className="grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-            Who Paid
+          <label className="grid gap-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+            支払った人
             <select
               className="h-11 rounded-xl border border-[color:var(--line)] bg-white/90 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
               value={payerId}
@@ -98,7 +98,7 @@ export default function ExpenseForm({
               disabled={participants.length === 0}
             >
               {participants.length === 0 ? (
-                <option value="">Add participant</option>
+                <option value="">参加者を追加</option>
               ) : null}
               {participants.map((participant) => (
                 <option key={participant.id} value={participant.id}>
@@ -107,31 +107,31 @@ export default function ExpenseForm({
               ))}
             </select>
           </label>
-          <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-            Title
+          <label className="grid gap-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+            内容
             <input
               className="h-11 rounded-xl border border-[color:var(--line)] bg-white/90 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
-              placeholder="Dinner, ticket, taxi"
+              placeholder="食事、チケット、タクシー"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
           </label>
         </div>
         <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-          <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-            Amount
+          <label className="grid gap-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+            金額
             <input
               type="number"
               min="0"
               step="0.01"
               className="h-11 rounded-xl border border-[color:var(--line)] bg-white/90 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
-              placeholder="0.00"
+              placeholder="0"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
             />
           </label>
-          <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-            Currency
+          <label className="grid gap-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+            通貨
             <select
               className="h-11 rounded-xl border border-[color:var(--line)] bg-white/90 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
               value={currency}
@@ -146,12 +146,12 @@ export default function ExpenseForm({
           </label>
         </div>
         {baseAmount !== null ? (
-          <p className="text-xs text-[color:var(--muted)]">
-            Converted: {formatCurrency(baseAmount, baseCurrency)}
+          <p className="text-[12px] text-[color:var(--muted)]">
+            換算後: {formatCurrency(baseAmount, baseCurrency)}
           </p>
         ) : null}
         {error ? (
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--warning)]">
+          <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--warning)]">
             {error}
           </p>
         ) : null}
@@ -160,17 +160,17 @@ export default function ExpenseForm({
         <button
           type="button"
           onClick={handleSubmit}
-          className="h-11 rounded-xl bg-[color:var(--accent)] px-6 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-[color:var(--accent-strong)]"
+          className="h-11 rounded-xl bg-[color:var(--accent)] px-6 text-[11px] font-semibold tracking-[0.12em] text-white transition hover:bg-[color:var(--accent-strong)]"
         >
-          {isEditing ? "Update Expense" : "Add Expense"}
+          {isEditing ? "更新" : "追加"}
         </button>
         {isEditing ? (
           <button
             type="button"
             onClick={onCancelEdit}
-            className="h-11 rounded-xl border border-[color:var(--line)] px-6 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--ink)] transition hover:border-[color:var(--muted)]"
+            className="h-11 rounded-xl border border-[color:var(--line)] px-6 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--ink)] transition hover:border-[color:var(--muted)]"
           >
-            Cancel
+            キャンセル
           </button>
         ) : null}
       </div>

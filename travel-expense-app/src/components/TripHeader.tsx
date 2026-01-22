@@ -21,32 +21,31 @@ export default function TripHeader({
     <section className="rounded-[32px] border border-[color:var(--line)] bg-white/70 px-6 pb-6 pt-8 shadow-soft backdrop-blur">
       <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
         <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[color:var(--muted)]">
-            Travel Expense Planner
+          <p className="text-[12px] font-semibold tracking-[0.18em] text-[color:var(--muted)]">
+            旅費精算プランナー
           </p>
           <div className="space-y-3">
-            <h1 className="font-display text-4xl leading-tight text-[color:var(--ink)] md:text-5xl">
-              Craft the trip, split the cost.
+            <h1 className="font-display text-[32px] font-semibold leading-[1.2] text-[color:var(--ink)] md:text-[40px]">
+              旅をつくって、費用をスマートに割り勘。
             </h1>
-            <p className="max-w-xl text-sm text-[color:var(--muted)] md:text-base">
-              Track payments in multiple currencies, keep everyone aligned, and
-              settle with the fewest transfers.
+            <p className="max-w-xl text-[14px] leading-7 text-[color:var(--muted)] md:text-[15px]">
+              複数通貨の支払いを記録し、みんなの負担を見える化。最小回数で精算します。
             </p>
           </div>
         </div>
         <div className="rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface)]/80 p-5">
           <div className="grid gap-4">
-            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-              Trip Title
+            <label className="grid gap-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+              旅行タイトル
               <input
                 className="h-11 rounded-xl border border-[color:var(--line)] bg-white/80 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
-                placeholder="Graduation Trip"
+                placeholder="卒業旅行"
                 value={tripTitle}
                 onChange={(event) => onTitleChange(event.target.value)}
               />
             </label>
-            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-              Base Currency
+            <label className="grid gap-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+              ベース通貨
               <select
                 className="h-11 rounded-xl border border-[color:var(--line)] bg-white/80 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
                 value={baseCurrency}
@@ -63,17 +62,17 @@ export default function TripHeader({
         </div>
       </div>
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-sm text-[color:var(--muted)]">
-        <p>Session auto-saves locally on this device.</p>
+        <p>この端末に自動保存されます。</p>
         <button
           type="button"
           onClick={onReset}
-          className="rounded-full border border-[color:var(--line)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+          className="rounded-full border border-[color:var(--line)] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
         >
-          Reset Trip
+          旅行データをリセット
         </button>
       </div>
       {rateNotice ? (
-        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--warning)]">
+        <p className="mt-3 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--warning)]">
           {rateNotice}
         </p>
       ) : null}

@@ -35,9 +35,9 @@ export default function ExpensesCard({
 
   return (
     <SectionCard
-      title="Expenses"
-      description="Record every payment with its original currency."
-      eyebrow="Spend"
+      title="支出"
+      description="支払いを現地通貨のまま記録できます。"
+      eyebrow="支出"
     >
       <div className="grid gap-6">
         <ExpenseForm

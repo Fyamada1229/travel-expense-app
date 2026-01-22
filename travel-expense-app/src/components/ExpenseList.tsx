@@ -31,7 +31,7 @@ export default function ExpenseList({
   if (expenses.length === 0) {
     return (
       <p className="text-sm text-[color:var(--muted)]">
-        No expenses yet. Add your first payment above.
+        まだ支出がありません。上のフォームから追加しましょう。
       </p>
     );
   }
@@ -55,7 +55,7 @@ export default function ExpenseList({
                 {expense.title}
               </p>
               <p className="text-xs text-[color:var(--muted)]">
-                {participantMap.get(expense.payerId) ?? "Unknown"} -{" "}
+                {participantMap.get(expense.payerId) ?? "不明"} -{" "}
                 {formatDateTime(expense.createdAt)}
               </p>
             </div>
@@ -70,7 +70,7 @@ export default function ExpenseList({
                   </p>
                 ) : (
                   <p className="text-xs text-[color:var(--warning)]">
-                    Rate missing
+                    レート未設定
                   </p>
                 )}
               </div>
@@ -78,16 +78,16 @@ export default function ExpenseList({
                 <button
                   type="button"
                   onClick={() => onEdit(expense.id)}
-                  className="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+                  className="rounded-full border border-[color:var(--line)] px-3 py-1 text-[11px] font-semibold tracking-[0.1em] text-[color:var(--ink)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
                 >
-                  Edit
+                  編集
                 </button>
                 <button
                   type="button"
                   onClick={() => onDelete(expense.id)}
-                  className="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--warning)] transition hover:border-[color:var(--warning)]"
+                  className="rounded-full border border-[color:var(--line)] px-3 py-1 text-[11px] font-semibold tracking-[0.1em] text-[color:var(--warning)] transition hover:border-[color:var(--warning)]"
                 >
-                  Delete
+                  削除
                 </button>
               </div>
             </div>

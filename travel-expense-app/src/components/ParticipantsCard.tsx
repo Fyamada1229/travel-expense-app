@@ -36,11 +36,11 @@ export default function ParticipantsCard({
   const handleAdd = () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setError("Name is required.");
+      setError("名前を入力してください。");
       return;
     }
     if (participants.some((participant) => participant.name === trimmed)) {
-      setError("Name already exists.");
+      setError("同じ名前が既にあります。");
       return;
     }
     onAddParticipant(trimmed);
@@ -50,32 +50,32 @@ export default function ParticipantsCard({
 
   return (
     <SectionCard
-      title="Participants"
-      description="Add travelers and track their contributions."
-      eyebrow="People"
+      title="参加者"
+      description="旅行メンバーを追加して支払い状況を見える化。"
+      eyebrow="参加者"
     >
       <div className="grid gap-5">
         <div className="grid gap-3 rounded-2xl border border-[color:var(--line)] bg-white/80 p-4">
-          <label className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
-            New Participant
+          <label className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+            参加者を追加
           </label>
           <div className="flex flex-wrap gap-3">
             <input
               className="h-11 flex-1 rounded-xl border border-[color:var(--line)] bg-white/90 px-3 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
-              placeholder="Add name"
+              placeholder="名前を入力"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
             <button
               type="button"
               onClick={handleAdd}
-              className="h-11 rounded-xl bg-[color:var(--accent)] px-5 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-[color:var(--accent-strong)]"
+              className="h-11 rounded-xl bg-[color:var(--accent)] px-5 text-[11px] font-semibold tracking-[0.12em] text-white transition hover:bg-[color:var(--accent-strong)]"
             >
-              Add
+              追加
             </button>
           </div>
           {error ? (
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[color:var(--warning)]">
+            <p className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--warning)]">
               {error}
             </p>
           ) : null}
@@ -84,7 +84,7 @@ export default function ParticipantsCard({
         <div className="grid gap-3">
           {participants.length === 0 ? (
             <p className="text-sm text-[color:var(--muted)]">
-              Add at least one participant to start splitting expenses.
+              精算を始めるには参加者を追加してください。
             </p>
           ) : null}
           {participants.map((participant) => {
@@ -101,12 +101,12 @@ export default function ParticipantsCard({
                     {participant.name}
                   </p>
                   <p className="text-xs text-[color:var(--muted)]">
-                    Paid {formatCurrency(paid, baseCurrency)}
+                    支払い合計 {formatCurrency(paid, baseCurrency)}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
+                    className={`rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.1em] ${
                       balance >= 0
                         ? "bg-emerald-100 text-emerald-700"
                         : "bg-rose-100 text-rose-700"
@@ -119,9 +119,9 @@ export default function ParticipantsCard({
                     type="button"
                     onClick={() => onRemoveParticipant(participant.id)}
                     disabled={hasExpenses}
-                    className="rounded-full border border-[color:var(--line)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--ink)] transition hover:border-[color:var(--warning)] hover:text-[color:var(--warning)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full border border-[color:var(--line)] px-3 py-1 text-[11px] font-semibold tracking-[0.1em] text-[color:var(--ink)] transition hover:border-[color:var(--warning)] hover:text-[color:var(--warning)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Remove
+                    削除
                   </button>
                 </div>
               </div>
@@ -129,7 +129,7 @@ export default function ParticipantsCard({
           })}
           {participants.some((participant) => expenseByPayer[participant.id]) ? (
             <p className="text-xs text-[color:var(--muted)]">
-              Participants with expenses cannot be removed.
+              支出がある参加者は削除できません。
             </p>
           ) : null}
         </div>

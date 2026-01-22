@@ -32,7 +32,7 @@ export const createId = () => {
 
 export const getCurrencyDigits = (currency: string) => {
   try {
-    const resolved = new Intl.NumberFormat("en-US", {
+    const resolved = new Intl.NumberFormat("ja-JP", {
       style: "currency",
       currency,
     }).resolvedOptions().maximumFractionDigits;
@@ -50,7 +50,7 @@ export const roundTo = (value: number, digits: number) => {
 export const formatCurrency = (value: number, currency: string) => {
   const digits = getCurrencyDigits(currency);
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("ja-JP", {
       style: "currency",
       currency,
       maximumFractionDigits: digits,
@@ -61,7 +61,7 @@ export const formatCurrency = (value: number, currency: string) => {
 };
 
 export const formatDateTime = (value: number) => {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("ja-JP", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));

@@ -41,17 +41,17 @@ export default function RatesCard({
 
   return (
     <SectionCard
-      title="Exchange Rates"
-      description={`Set rates so 1 unit equals base currency (${baseCurrency}).`}
-      eyebrow="Rates"
+      title="為替レート"
+      description={`1通貨単位がベース通貨でいくらかを設定します（ベース: ${baseCurrency}）。`}
+      eyebrow="レート"
       action={
         <button
           type="button"
           onClick={onFetchRates}
           disabled={status === "loading"}
-          className="rounded-full bg-[color:var(--ink)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[color:var(--ink)] px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {status === "loading" ? "Refreshing" : "Fetch Latest"}
+          {status === "loading" ? "取得中" : "最新レート取得"}
         </button>
       }
     >
@@ -59,11 +59,11 @@ export default function RatesCard({
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[color:var(--muted)]">
           <p>
             {lastUpdated
-              ? `Last updated ${formatDateTime(lastUpdated)}`
-              : "No rates fetched yet"}
+              ? `最終更新: ${formatDateTime(lastUpdated)}`
+              : "まだレートを取得していません"}
           </p>
           {status === "error" && error ? (
-            <span className="font-semibold uppercase tracking-[0.2em] text-[color:var(--warning)]">
+            <span className="text-[11px] font-semibold tracking-[0.12em] text-[color:var(--warning)]">
               {error}
             </span>
           ) : null}
@@ -71,12 +71,12 @@ export default function RatesCard({
         <div className="flex flex-wrap items-center gap-3">
           <input
             className="h-10 flex-1 rounded-full border border-[color:var(--line)] bg-white/90 px-4 text-sm font-semibold text-[color:var(--ink)] shadow-inner outline-none transition focus:border-[color:var(--accent)]"
-            placeholder="Filter currencies"
+            placeholder="通貨を絞り込み"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <span className="rounded-full border border-[color:var(--line)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            {baseCurrency} base
+          <span className="rounded-full border border-[color:var(--line)] px-3 py-2 text-[11px] font-semibold tracking-[0.12em] text-[color:var(--muted)]">
+            {baseCurrency} 基準
           </span>
         </div>
         <div className="grid gap-3">
