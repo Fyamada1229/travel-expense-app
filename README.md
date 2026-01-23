@@ -57,8 +57,9 @@
 3. 以下の内容を入力してください：
 
 ```env
-NEXT_PUBLIC_EXCHANGE_RATE_API_KEY=あなたのAPIキー
-
+EXCHANGERATE_ACCESS_KEY=あなたのAPIキー
+# 必要なら変更可
+EXCHANGERATE_BASE_URL=https://api.exchangerate.host
 ```
 
 > [!CAUTION]
